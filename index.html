@@ -274,9 +274,16 @@
 <!-- Navigation -->
 <nav class="navbar">
     <div class="logo">
-        <h1>Kampala Health Access System <span>(KHAS)</span></h1>
-        <small>Healthcare</small>
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="background: #0D9488; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-hospital-user" style="color: white; font-size: 22px;"></i>
+        </div>
+        <div>
+            <h1 style="font-size: clamp(1rem, 4vw, 1.3rem); margin: 0;">KAMPALA HEALTH ACCESS SYSTEM <span style="color: #0D9488;">(KHAS)</span></h1>
+            <small style="font-size: clamp(0.6rem, 2vw, 0.7rem); color: #64748B;">Health Care Facilities Suggested For You</small>
+        </div>
     </div>
+</div>
     <div class="nav-links" id="navLinks">
         <a class="nav-link" onclick="scrollToTop()">Home</a>
         <a class="nav-link" onclick="scrollToOffer()">About</a>
@@ -546,6 +553,7 @@ const medicines = [
 ];
 
 // ============ 54+ DOCTORS ============
+// ============ 54+ DOCTORS (FULL LIST - 54 DOCTORS) ============
 const doctors = [
     { name: "Dr. Michael Okello", specialty: "General Physician", role: "Physician", email: "m.okello@khas.ug", contact: "+256 700 123456", facilities: ["Mulago Hospital", "Kiruddu Hospital", "Kawempe Hospital"], currentFacility: "Mulago Hospital", experience: "12 years" },
     { name: "Dr. Sarah Namugenyi", specialty: "Pediatrician", role: "Pediatrician", email: "s.namugenyi@khas.ug", contact: "+256 700 123457", facilities: ["Mulago Hospital", "Kawempe Hospital", "Mbuya Hospital"], currentFacility: "Mulago Hospital", experience: "8 years" },
@@ -611,26 +619,38 @@ let slideInterval;
 let inactivityTimer = null;
 
 // ============ USER PROFILE FUNCTIONS ============
+function getUserDisplayName() {
+    if (!currentUser) return null;
+    return currentUser.firstName || currentUser.fullName?.split(' ')[0] || currentUser.email?.split('@')[0] || 'User';
+}
+
+function getUserInitial() {
+    const name = getUserDisplayName();
+    return name ? name.charAt(0).toUpperCase() : 'U';
+}
+
+function getUserProfileHTML() {
+    if (!currentUser) {
+        return `<button class="login-btn" onclick="showAuthModal()">Login / Sign Up</button>`;
+    }
+    const firstName = getUserDisplayName();
+    const initial = getUserInitial();
+    return `
+        <div class="user-profile">
+            <div class="user-avatar">${initial}</div>
+            <div class="user-info">
+                <span class="user-name">${firstName}</span>
+                <span class="user-welcome">Welcome back!</span>
+            </div>
+            <button class="logout-btn-nav" onclick="showLogoutModal()">Logout</button>
+        </div>
+    `;
+}
+
 function updateAuthSection() {
     const authSection = document.getElementById('authSection');
-    if (!authSection) return;
-    
-    if (currentUser) {
-        const firstName = currentUser.firstName || currentUser.fullName?.split(' ')[0] || currentUser.email?.split('@')[0] || 'User';
-        const initial = firstName.charAt(0).toUpperCase();
-        
-        authSection.innerHTML = `
-            <div class="user-profile">
-                <div class="user-avatar">${initial}</div>
-                <div class="user-info">
-                    <span class="user-name">${firstName}</span>
-                    <span class="user-welcome">Welcome back!</span>
-                </div>
-                <button class="logout-btn-nav" onclick="showLogoutModal()">Logout</button>
-            </div>
-        `;
-    } else {
-        authSection.innerHTML = `<button class="login-btn" onclick="showAuthModal()">Login / Sign Up</button>`;
+    if (authSection) {
+        authSection.innerHTML = getUserProfileHTML();
     }
 }
 
@@ -949,8 +969,8 @@ function renderDashboardHomePage() {
                     <a onclick="navigateToFeature('facilities')"><i class="fas fa-hospital"></i> Facilities (${facilities.length})</a>
                     <a onclick="navigateToFeature('medicines')"><i class="fas fa-pills"></i> Drugs (${medicines.length})</a>
                     <a onclick="navigateToFeature('doctors')"><i class="fas fa-user-md"></i> Doctors (${doctors.length})</a>
-                    <button class="login-btn" onclick="logout()">Logout</button>
                 </div>
+                ${getUserProfileHTML()}
             </div>
             <div class="dashboard-content">
                 <div class="map-container" id="homeMapContainer"><div id="homeMap" style="height:100%;width:100%;"></div></div>
@@ -1043,8 +1063,8 @@ function renderDashboard(feature) {
                     <a onclick="navigateToFeature('facilities')"><i class="fas fa-hospital"></i> Facilities (${facilities.length})</a>
                     <a onclick="navigateToFeature('medicines')"><i class="fas fa-pills"></i> Drugs (${medicines.length})</a>
                     <a onclick="navigateToFeature('doctors')"><i class="fas fa-user-md"></i> Doctors (${doctors.length})</a>
-                    <button class="login-btn" onclick="logout()">Logout</button>
                 </div>
+                ${getUserProfileHTML()}
             </div>
             <div class="dashboard-content">
                 <div class="search-bar"><input type="text" id="searchInput" placeholder="Search facilities, medicines, or doctors..."></div>
