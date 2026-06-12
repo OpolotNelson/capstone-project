@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>KHAS - Kampala Health Access System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #F0F4F8; color: #1e3a5f; overflow-x: hidden; }
+        h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; }
+
+        /* Navigation */
+        .navbar {
+            background: white;
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 10000;
+            flex-wrap: wrap;
+        }
+        .logo h1 { color: #1e3a5f; font-size: clamp(1rem, 4vw, 1.3rem); }
+        .logo span { color: #0D9488; }
+        .logo small { font-size: clamp(0.6rem, 2vw, 0.7rem); color: #64748B; display: block; }
+        .nav-links { display: flex; gap: clamp(0.8rem, 2vw, 1.5rem); align-items: center; flex-wrap: wrap; }
+        .nav-link, .feature-nav { text-decoration: none; color: #1e3a5f; cursor: pointer; font-weight: 500; padding: 0.5rem; font-size: clamp(0.8rem, 2vw, 1rem); transition: color 0.3s; }
+        .nav-link:hover, .feature-nav:hover { color: #0D9488; }
+        
+        /* User Profile Section */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #F1F5F9;
+            padding: 0.4rem 1rem 0.4rem 0.8rem;
+            border-radius: 40px;
+            transition: all 0.3s;
+        }
+        .user-profile:hover {
+            background: #E2E8F0;
+        }
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            background: #0D9488;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .user-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+        .user-welcome {
+            font-size: 0.7rem;
+            color: #64748B;
+        }
+        .logout-btn-nav {
+            background: #EF4444;
+            color: white;
+            padding: 0.4rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+        .logout-btn-nav:hover {
+            background: #DC2626;
+            transform: translateY(-1px);
+        }
+        .login-btn {
+            background: #1e3a5f;
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            transition: all 0.3s;
+        }
+        .login-btn:hover { background: #0D9488; transform: translateY(-2px); }
+
+        .hero-slider { margin-top: 80px; position: relative; height: 550px; overflow: hidden; }
+        .slide { position: absolute; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; transition: opacity 1s ease-in-out; display: flex; align-items: center; justify-content: center; text-align: center; color: white; }
+        .slide.active { opacity: 1; }
+        .slide-content { background: rgba(0,0,0,0.55); padding: 2.5rem; border-radius: 20px; max-width: 80%; backdrop-filter: blur(2px); }
+        .slide-content h1 { font-size: clamp(1.5rem, 5vw, 2.8rem); margin-bottom: 1rem; }
+        .slide-content p { font-size: clamp(0.9rem, 2.5vw, 1.2rem); }
+        .slide-content i { font-size: clamp(2rem, 6vw, 3rem); margin-bottom: 1rem; color: #0D9488; }
+        .slider-dots { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; z-index: 10; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; background: white; cursor: pointer; }
+        .dot.active { background: #0D9488; width: 30px; border-radius: 10px; }
+
+        .section { padding: 60px 5%; }
+        .section-title { text-align: center; font-size: clamp(1.5rem, 4vw, 2rem); margin-bottom: 2rem; color: #1e3a5f; }
+        .mv-grid, .values-grid, .features-grid { display: grid; gap: 2rem; max-width: 1200px; margin: 0 auto; }
+        .mv-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .values-grid { grid-template-columns: repeat(3, 1fr); }
+        .features-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .mv-card, .value-card, .feature-card { background: white; padding: clamp(1.2rem, 3vw, 2rem); border-radius: 16px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.3s; }
+        .mv-card:hover, .value-card:hover, .feature-card:hover { transform: translateY(-5px); box-shadow: 0 8px 12px rgba(0,0,0,0.15); }
+        .mv-card i, .value-card i, .feature-card i { font-size: clamp(2rem, 5vw, 3rem); color: #0D9488; margin-bottom: 1rem; }
+
+        .footer { background: #1e3a5f; color: white; padding: 3rem 5%; margin-top: auto; width: 100%; }
+        .footer-content { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1.5fr 2fr 1.5fr; gap: 2rem; align-items: start; }
+        .footer-section h4 { margin-bottom: 1.2rem; color: #0D9488; font-size: clamp(0.9rem, 3vw, 1.1rem); }
+        .footer-section p, .footer-section a { font-size: clamp(0.8rem, 2.5vw, 0.9rem); line-height: 1.6; opacity: 0.85; }
+        .footer-section a { color: white; text-decoration: none; display: block; margin: 0.6rem 0; cursor: pointer; transition: color 0.3s; }
+        .footer-section a:hover { color: #0D9488; opacity: 1; }
+        .quick-links-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1rem; }
+        .quick-links-grid a { margin: 0; }
+        .quick-links-grid .full-width { grid-column: span 2; }
+        .contact-item { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+        .contact-item i { width: 20px; color: #0D9488; }
+        .student-id { margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .social-links { display: flex; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+        .social-links a { display: inline-block; margin: 0; transition: transform 0.3s; }
+        .social-links a:hover { transform: translateY(-3px); color: #0D9488; }
+        .social-links i { font-size: clamp(1.2rem, 4vw, 1.5rem); }
+        .social-handle { font-size: clamp(0.7rem, 2.5vw, 0.85rem); opacity: 0.8; }
+        .copyright { text-align: center; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); max-width: 1200px; margin-left: auto; margin-right: auto; font-size: clamp(0.7rem, 2vw, 0.8rem); opacity: 0.6; }
+
+        /* Modals */
+        .modal, .logout-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 30000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal.active, .logout-modal.active { display: flex; }
+        .modal-content, .logout-modal-content { background: white; padding: clamp(1.2rem, 4vw, 2rem); border-radius: 24px; max-width: 500px; width: 90%; text-align: center; animation: modalSlideIn 0.3s ease; box-shadow: 0 25px 45px rgba(0,0,0,0.2); }
+        .logout-modal-content .icon-circle { width: 70px; height: 70px; background: #FEE2E2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+        .logout-modal-content .icon-circle i { font-size: 2.5rem; color: #EF4444; }
+        .logout-modal-content h3 { font-size: clamp(1.3rem, 5vw, 1.6rem); font-weight: 700; color: #1e3a5f; margin-bottom: 0.5rem; }
+        .logout-modal-content p { color: #64748B; font-size: clamp(0.85rem, 3vw, 0.95rem); margin-bottom: 1.8rem; line-height: 1.5; }
+        .logout-modal-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .btn-logout-confirm { background: #EF4444; color: white; padding: 0.75rem 1.8rem; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: clamp(0.85rem, 3vw, 0.95rem); transition: all 0.3s; flex: 1; min-width: 120px; }
+        .btn-logout-confirm:hover { background: #DC2626; transform: translateY(-2px); }
+        .btn-logout-cancel { background: #F1F5F9; color: #1e3a5f; padding: 0.75rem 1.8rem; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: clamp(0.85rem, 3vw, 0.95rem); transition: all 0.3s; flex: 1; min-width: 120px; }
+        .btn-logout-cancel:hover { background: #E2E8F0; transform: translateY(-2px); }
+        .modal-content h2 { margin-bottom: 1.5rem; font-size: clamp(1.2rem, 4vw, 1.5rem); }
+        .modal-content input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: clamp(0.85rem, 3vw, 1rem); }
+        .btn-primary { width: 100%; padding: 0.75rem; background: #1e3a5f; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: clamp(0.85rem, 3vw, 1rem); transition: all 0.3s; }
+        .btn-primary:hover { background: #0D9488; }
+        .btn-secondary { width: 100%; padding: 0.75rem; background: #64748B; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: clamp(0.85rem, 3vw, 1rem); margin-top: 0.5rem; transition: all 0.3s; }
+        .btn-secondary:hover { background: #475569; }
+        .close-modal { float: right; cursor: pointer; font-size: 1.5rem; color: #999; transition: color 0.3s; }
+        .close-modal:hover { color: #1e3a5f; }
+        .error-message { color: #EF4444; font-size: 0.8rem; text-align: center; margin-top: -0.5rem; margin-bottom: 0.5rem; }
+        .success-message { color: #0D9488; font-size: 0.8rem; text-align: center; margin-top: -0.5rem; margin-bottom: 0.5rem; }
+        .divider { text-align: center; margin: 1rem 0; position: relative; }
+        .divider::before, .divider::after { content: ""; position: absolute; top: 50%; width: 40%; height: 1px; background: #E2E8F0; }
+        .divider::before { left: 0; }
+        .divider::after { right: 0; }
+        .divider span { background: white; padding: 0 1rem; color: #64748B; font-size: 0.85rem; }
+
+        @keyframes modalSlideIn {
+            from { transform: translateY(-30px) scale(0.95); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        /* Dashboard */
+        .dashboard-container { min-height: 100vh; background: #F0F4F8; display: flex; flex-direction: column; }
+        .dashboard-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10000; flex-wrap: wrap; gap: 1rem; }
+        .dashboard-header h2 { font-size: clamp(1rem, 4vw, 1.3rem); }
+        .dashboard-nav { display: flex; gap: clamp(0.8rem, 2vw, 1.5rem); align-items: center; flex-wrap: wrap; }
+        .dashboard-nav a { text-decoration: none; color: #1e3a5f; font-weight: 500; cursor: pointer; padding: 0.5rem; font-size: clamp(0.75rem, 2.5vw, 0.9rem); transition: color 0.3s; }
+        .dashboard-nav a:hover { color: #0D9488; }
+        .dashboard-content { padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; flex: 1; }
+        .search-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .search-bar input { flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: clamp(0.85rem, 3vw, 1rem); min-width: 200px; }
+        
+        .facility-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        .medicine-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        .doctor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+        
+        .facility-card, .medicine-card, .doctor-card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s; cursor: pointer; }
+        .facility-card:hover, .medicine-card:hover, .doctor-card:hover { transform: translateY(-5px); box-shadow: 0 8px 12px rgba(0,0,0,0.15); }
+        .facility-name, .medicine-name, .doctor-name { color: #0D9488; font-size: clamp(1rem, 3vw, 1.2rem); font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .facility-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 0.8rem 0; }
+        .detail-item { display: flex; align-items: center; gap: 0.5rem; font-size: clamp(0.75rem, 2.5vw, 0.85rem); flex-wrap: wrap; }
+        .detail-item i { color: #0D9488; width: 20px; }
+        .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .in-stock, .available { background: #D1FAE5; color: #065F46; }
+        .low-stock, .busy { background: #FEF3C7; color: #92400E; }
+        .out-stock, .off-duty { background: #FEE2E2; color: #991B1B; }
+        
+        .detail-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1rem; }
+        .detail-info { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .detail-map { background: white; border-radius: 16px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .detail-map .map-container { height: 400px; width: 100%; border-radius: 12px; overflow: hidden; margin-top: 0; }
+        .detail-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid #0D9488; padding-bottom: 0.5rem; flex-wrap: wrap; }
+        .detail-header i { font-size: clamp(1.5rem, 4vw, 2rem); color: #0D9488; }
+        .detail-header h2 { color: #0D9488; font-size: clamp(1.1rem, 4vw, 1.3rem); }
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 1rem 0; }
+        .detail-card { background: #F8FAFC; padding: 1rem; border-radius: 12px; }
+        .detail-card h4 { color: #1e3a5f; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: clamp(0.9rem, 3vw, 1rem); }
+        .back-btn { background: #1e3a5f; color: white; padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 1rem; font-weight: 600; font-size: clamp(0.8rem, 2.5vw, 0.9rem); transition: all 0.3s; }
+        .back-btn:hover { background: #0D9488; }
+        .map-container { height: 400px; border-radius: 12px; overflow: hidden; margin-top: 1.5rem; width: 100%; position: relative; z-index: 1; }
+        #homeMap, #facilityMap { height: 100%; width: 100%; z-index: 1; }
+        .info-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 2rem; }
+        .info-card { background: white; padding: 1.5rem; border-radius: 16px; text-align: center; cursor: pointer; transition: transform 0.3s; }
+        .info-card:hover { transform: translateY(-5px); box-shadow: 0 8px 12px rgba(0,0,0,0.15); }
+        .info-card i { font-size: clamp(1.8rem, 5vw, 2.5rem); color: #0D9488; margin-bottom: 0.5rem; }
+        .info-card h3 { font-size: clamp(0.9rem, 3vw, 1.1rem); margin-bottom: 0.3rem; }
+        .info-card p { font-size: clamp(0.75rem, 2.5vw, 0.85rem); color: #64748B; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e3a5f; color: white; padding: 10px 20px; border-radius: 8px; z-index: 30000; font-size: clamp(0.8rem, 2.5vw, 0.9rem); white-space: nowrap; }
+        
+        .leaflet-control-container, .leaflet-pane, .leaflet-top, .leaflet-bottom { z-index: 1 !important; }
+        
+        @media (max-width: 1200px) {
+            .facility-grid, .medicine-grid, .doctor-grid { grid-template-columns: repeat(3, 1fr); }
+            .info-cards { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 992px) {
+            .facility-grid, .medicine-grid, .doctor-grid { grid-template-columns: repeat(2, 1fr); }
+            .info-cards { grid-template-columns: repeat(2, 1fr); }
+            .footer-content { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+            .values-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; text-align: center; gap: 0.8rem; }
+            .nav-links { justify-content: center; }
+            .dashboard-header { flex-direction: column; text-align: center; }
+            .dashboard-nav { justify-content: center; }
+            .detail-wrapper { grid-template-columns: 1fr; gap: 1rem; }
+            .hero-slider { height: 400px; }
+            .slide-content { padding: 1.5rem; max-width: 90%; }
+            .section { padding: 40px 5%; }
+            .footer-content { grid-template-columns: 1fr; text-align: center; gap: 1.5rem; }
+            .contact-item { justify-content: center; }
+            .student-id { justify-content: center; }
+            .social-links { justify-content: center; }
+            .quick-links-grid { justify-content: center; }
+            .toast { white-space: normal; text-align: center; max-width: 90%; }
+        }
+        @media (max-width: 576px) {
+            .facility-grid, .medicine-grid, .doctor-grid { grid-template-columns: 1fr; }
+            .info-cards { grid-template-columns: 1fr; }
+            .values-grid { grid-template-columns: 1fr; }
+            .mv-grid { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: 1fr; }
+            .hero-slider { height: 350px; }
+            .dashboard-content { padding: 1rem; }
+            .facility-details { grid-template-columns: 1fr; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .logout-modal-buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="navbar">
+    <div class="logo">
+        <h1>Kampala Health Access System <span>(KHAS)</span></h1>
+        <small>Healthcare</small>
+    </div>
+    <div class="nav-links" id="navLinks">
+        <a class="nav-link" onclick="scrollToTop()">Home</a>
+        <a class="nav-link" onclick="scrollToOffer()">About</a>
+        <a class="feature-nav" onclick="checkAuthAndNavigate('facilities')">Facilities</a>
+        <a class="feature-nav" onclick="checkAuthAndNavigate('medicines')">Drugs</a>
+        <a class="feature-nav" onclick="checkAuthAndNavigate('doctors')">Doctors</a>
+        <div id="authSection"></div>
+    </div>
+</nav>
+
+<!-- Custom Logout Confirmation Modal -->
+<div id="logoutModal" class="logout-modal">
+    <div class="logout-modal-content">
+        <div class="icon-circle">
+            <i class="fas fa-question-circle"></i>
+        </div>
+        <h3>KHAS Says</h3>
+        <p>Are you sure you want to log out?<br>You will need to login again to access your dashboard.</p>
+        <div class="logout-modal-buttons">
+            <button class="btn-logout-confirm" onclick="confirmLogout()">Yes, Logout</button>
+            <button class="btn-logout-cancel" onclick="closeLogoutModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hero Slider -->
+<div class="hero-slider">
+    <div class="slide active" style="background-image: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://images.pexels.com/photos/236380/pexels-photo-236380.jpeg?auto=compress&cs=tinysrgb&w=1200');">
+        <div class="slide-content">
+            <i class="fas fa-hospital-user"></i>
+            <h1>Find Nearest Health Facility</h1>
+            <p>Locate hospitals and clinics near you with real-time medicine and doctor availability</p>
+        </div>
+    </div>
+    <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://images.pexels.com/photos/3845754/pexels-photo-3845754.jpeg?auto=compress&cs=tinysrgb&w=1200');">
+        <div class="slide-content">
+            <i class="fas fa-user-md"></i>
+            <h1>Connect With Doctors</h1>
+            <p>Find available doctors, view their specialties, and get professional medical advice</p>
+        </div>
+    </div>
+    <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://images.pexels.com/photos/4386466/pexels-photo-4386466.jpeg?auto=compress&cs=tinysrgb&w=1200');">
+        <div class="slide-content">
+            <i class="fas fa-pills"></i>
+            <h1>Find Medicines Near You</h1>
+            <p>Check medicine availability and stock levels before you travel to the pharmacy</p>
+        </div>
+    </div>
+    <div class="slider-dots">
+        <div class="dot active" onclick="currentSlide(0)"></div>
+        <div class="dot" onclick="currentSlide(1)"></div>
+        <div class="dot" onclick="currentSlide(2)"></div>
+    </div>
+</div>
+
+<!-- Mission & Vision Section -->
+<section id="mission-section">
+    <div class="section">
+        <h2 class="section-title">Our Mission & Vision</h2>
+        <div class="mv-grid">
+            <div class="mv-card"><i class="fas fa-bullseye"></i><h3>Our Mission</h3><p>To provide real-time healthcare information to every Kampala resident, ensuring no patient travels for unavailable medicine or care.</p></div>
+            <div class="mv-card"><i class="fas fa-eye"></i><h3>Our Vision</h3><p>A Kampala where healthcare is transparent, accessible, and efficient for all citizens.</p></div>
+        </div>
+        <h2 class="section-title">Our Core Values</h2>
+        <div class="values-grid">
+            <div class="value-card"><i class="fas fa-heart"></i><h3>Compassion</h3><p>Patients first</p></div>
+            <div class="value-card"><i class="fas fa-chart-line"></i><h3>Innovation</h3><p>Tech-driven solutions</p></div>
+            <div class="value-card"><i class="fas fa-shield-alt"></i><h3>Integrity</h3><p>Accurate information</p></div>
+            <div class="value-card"><i class="fas fa-users"></i><h3>Accessibility</h3><p>Healthcare for all</p></div>
+            <div class="value-card"><i class="fas fa-clock"></i><h3>Timeliness</h3><p>Real-time updates</p></div>
+            <div class="value-card"><i class="fas fa-hand-holding-heart"></i><h3>Excellence</h3><p>Quality care</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- What We Offer Section -->
+<section id="offer-section">
+    <div class="section">
+        <h2 class="section-title">What We Offer</h2>
+        <div class="features-grid">
+            <div class="feature-card" onclick="checkAuthAndNavigate('facilities')"><i class="fas fa-hospital"></i><h3>Health Facilities</h3><p>Find nearby hospitals with real-time medicine and doctor status</p></div>
+            <div class="feature-card" onclick="checkAuthAndNavigate('medicines')"><i class="fas fa-pills"></i><h3>Medicine Locator</h3><p>Check medicine availability before you travel</p></div>
+            <div class="feature-card" onclick="checkAuthAndNavigate('doctors')"><i class="fas fa-user-md"></i><h3>Doctor Directory</h3><p>Find available doctors and their contact info</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <div class="footer-section">
+            <h4>Kampala Health Access System (KHAS)</h4>
+            <p>Making healthcare accessible to all Kampala residents.</p>
+        </div>
+        <div class="footer-section">
+            <h4>Quick Links</h4>
+            <div class="quick-links-grid">
+                <a onclick="scrollToTop()">Home</a>
+                <a onclick="scrollToOffer()">About</a>
+                <a onclick="checkAuthAndNavigate('facilities')">Facilities</a>
+                <a onclick="checkAuthAndNavigate('medicines')">Drugs</a>
+                <a class="full-width" onclick="checkAuthAndNavigate('doctors')">Doctors</a>
+            </div>
+        </div>
+        <div class="footer-section">
+            <h4>Contact</h4>
+            <div class="contact-item"><i class="fas fa-phone-alt"></i> +256 789352662 / +256 766714967</div>
+            <div class="contact-item"><i class="fas fa-envelope"></i> opolotnelson1@gmail.com</div>
+            <div class="student-id"><i class="fas fa-id-card"></i> Student ID: PLP-AIS-2602-15209</div>
+        </div>
+        <div class="footer-section">
+            <h4>Follow Us</h4>
+            <div class="social-links">
+                <a href="https://www.facebook.com/NsonNelly" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                <a href="https://x.com/OpolotNelson" target="_blank"><i class="fab fa-twitter"></i></a>
+                <a href="https://www.linkedin.com/in/opolot-nelson-330513257/" target="_blank"><i class="fab fa-linkedin-in"></i></a>
+                <a href="https://www.youtube.com/@opolotnelson1999" target="_blank"><i class="fab fa-youtube"></i></a>
+            </div>
+            <div class="social-handle">@OpolotNelson</div>
+        </div>
+    </div>
+    <div class="copyright">© 2026 KHAS Healthcare. All rights reserved.</div>
+</footer>
+
+<!-- Auth Modal -->
+<div id="authModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeAuthModal()">&times;</span>
+        
+        <!-- Login View -->
+        <div id="loginView">
+            <h2>Login to KHAS</h2>
+            <input type="text" id="loginIdentifier" placeholder="Email or Phone Number (+256...)" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+            <div id="loginError" class="error-message"></div>
+            <button class="btn-primary" onclick="login()">Login</button>
+            <div class="divider"><span>or</span></div>
+            <button class="btn-secondary" onclick="showForgotPasswordView()">Forgot Password? Reset via Email</button>
+            <p style="text-align:center;margin-top:1rem;">No account? <a href="#" onclick="showRegisterView()">Create Account</a></p>
+        </div>
+        
+        <!-- Register View -->
+        <div id="registerView" style="display:none;">
+            <h2>Create Account</h2>
+            <input type="text" id="regFirstName" placeholder="First Name" required>
+            <input type="text" id="regLastName" placeholder="Last Name" required>
+            <input type="email" id="regEmail" placeholder="Email Address" required>
+            <input type="text" id="regPhone" placeholder="Phone Number (+256XXXXXXXXX)" pattern="\+256\d{9}" required>
+            <input type="password" id="regPassword" placeholder="Password (min 6 characters)" required>
+            <input type="password" id="regConfirmPassword" placeholder="Confirm Password" required>
+            <div id="registerError" class="error-message"></div>
+            <button class="btn-primary" onclick="register()">Register</button>
+            <p style="text-align:center;margin-top:1rem;">Already have an account? <a href="#" onclick="showLoginView()">Login</a></p>
+        </div>
+        
+        <!-- Forgot Password View -->
+        <div id="forgotPasswordView" style="display:none;">
+            <h2>Reset Password</h2>
+            <input type="email" id="resetEmail" placeholder="Enter your email address" required>
+            <div id="resetError" class="error-message"></div>
+            <div id="resetSuccess" class="success-message"></div>
+            <button class="btn-primary" onclick="sendPasswordReset()">Send Reset Link</button>
+            <p style="text-align:center;margin-top:1rem;"><a href="#" onclick="showLoginView()">Back to Login</a></p>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Container -->
+<div id="dashboardContainer" style="display:none;"></div>
+
+<script>
+// ============ FIREBASE CONFIGURATION ============
+const firebaseConfig = {
+    apiKey: "AIzaSyD0cwFqllHxhG9GfMgXqsNUHCu8VND29ic",
+    authDomain: "khas-healthcare.firebaseapp.com",
+    projectId: "khas-healthcare",
+    storageBucket: "khas-healthcare.firebasestorage.app",
+    messagingSenderId: "532194176164",
+    appId: "1:532194176164:web:30b8113a5843c035ce8a31",
+    measurementId: "G-1FXJXCLWNJ"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// ============ 25+ FACILITIES ============
+const facilities = [
+    { id: 1, name: "Mulago National Referral Hospital", division: "Kawempe Division", lat: 0.3354, lng: 32.5753, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Artemisinin", "Paracetamol", "Amoxicillin", "Quinine", "Antiretrovirals"], doctors: ["Dr. Okello", "Dr. Namugenyi", "Dr. Musoke"], distance: "2.1 km", openHours: "24/7", contact: "+256 414 123456" },
+    { id: 2, name: "Nsambya Hospital", division: "Makindye Division", lat: 0.2989, lng: 32.5989, medicineStatus: "Low Stock", doctorStatus: "Busy", medicines: ["Coartem", "Paracetamol", "Ibuprofen"], doctors: ["Dr. Namutebi", "Dr. Ssali", "Dr. Nakawooya"], distance: "4.5 km", openHours: "6am-10pm", contact: "+256 414 123789" },
+    { id: 3, name: "Kiswa Health Centre IV", division: "Nakawa Division", lat: 0.3120, lng: 32.5650, medicineStatus: "Out of Stock", doctorStatus: "Off Duty", medicines: ["Paracetamol"], doctors: ["Dr. Nambi"], distance: "1.8 km", openHours: "8am-5pm", contact: "+256 752 123456" },
+    { id: 4, name: "Rubaga Hospital", division: "Rubaga Division", lat: 0.3050, lng: 32.5550, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Artemisinin", "Amoxicillin", "Metronidazole"], doctors: ["Dr. Mukasa", "Dr. Nakato", "Dr. Kwizera"], distance: "5.2 km", openHours: "24/7", contact: "+256 414 124567" },
+    { id: 5, name: "Kiruddu National Referral Hospital", division: "Nakawa Division", lat: 0.3200, lng: 32.5900, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Antiretrovirals", "TB Drugs", "Artemisinin"], doctors: ["Dr. Asiimwe", "Dr. Nabatanzi", "Dr. Lugemwa"], distance: "3.2 km", openHours: "24/7", contact: "+256 414 987654" },
+    { id: 6, name: "Case Clinic Kampala", division: "Central Division", lat: 0.3150, lng: 32.5850, medicineStatus: "In Stock", doctorStatus: "Busy", medicines: ["Ibuprofen", "Antibiotics"], doctors: ["Dr. Mutesasira", "Dr. Kemigisha", "Dr. Wasswa"], distance: "2.8 km", openHours: "7am-9pm", contact: "+256 312 123456" },
+    { id: 7, name: "International Hospital Kampala", division: "Central Division", lat: 0.3280, lng: 32.5880, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Specialized Medications", "Cancer Drugs"], doctors: ["Dr. Ochen", "Dr. Achieng", "Dr. Mubiru"], distance: "3.5 km", openHours: "24/7", contact: "+256 312 200400" },
+    { id: 8, name: "Kawempe Hospital", division: "Kawempe Division", lat: 0.3500, lng: 32.5700, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Maternal Drugs", "Child Vaccines"], doctors: ["Dr. Nambooze", "Dr. Kiggundu", "Dr. Nassali"], distance: "3.8 km", openHours: "24/7", contact: "+256 414 678901" },
+    { id: 9, name: "Mbuya Hospital", division: "Nakawa Division", lat: 0.3250, lng: 32.6200, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Paracetamol", "Amoxicillin", "Vitamins"], doctors: ["Dr. Ssebunya", "Dr. Nalwoga"], distance: "4.0 km", openHours: "24/7", contact: "+256 414 123456" },
+    { id: 10, name: "Kisubi Hospital", division: "Makindye Division", lat: 0.2850, lng: 32.5800, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Artemisinin", "Paracetamol", "Amoxicillin"], doctors: ["Dr. Katumba", "Dr. Nabatanzi"], distance: "8.5 km", openHours: "24/7", contact: "+256 414 123456" },
+    { id: 11, name: "Namuwongo Health Centre", division: "Nakawa Division", lat: 0.3180, lng: 32.5950, medicineStatus: "Low Stock", doctorStatus: "Busy", medicines: ["Paracetamol", "Amoxicillin"], doctors: ["Dr. Kato"], distance: "2.5 km", openHours: "8am-8pm", contact: "+256 752 123456" },
+    { id: 12, name: "St. Francis Hospital Nsambya", division: "Makindye Division", lat: 0.2970, lng: 32.5990, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Paracetamol", "Amoxicillin", "Metronidazole"], doctors: ["Dr. Lwanga", "Dr. Nantongo"], distance: "4.8 km", openHours: "24/7", contact: "+256 414 123000" },
+    { id: 13, name: "Kampala Hospital", division: "Central Division", lat: 0.3100, lng: 32.5800, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["All Major Drugs", "Emergency Medications"], doctors: ["Dr. Ssekandi", "Dr. Nakalembe"], distance: "2.5 km", openHours: "24/7", contact: "+256 414 345678" },
+    { id: 14, name: "Victoria University Clinic", division: "Central Division", lat: 0.3250, lng: 32.5820, medicineStatus: "In Stock", doctorStatus: "Busy", medicines: ["First Aid", "Pain Relief", "Antibiotics"], doctors: ["Dr. Nalubega", "Dr. Kizito"], distance: "3.0 km", openHours: "8am-8pm", contact: "+256 312 456789" },
+    { id: 15, name: "Makindye General Hospital", division: "Makindye Division", lat: 0.2900, lng: 32.5950, medicineStatus: "Low Stock", doctorStatus: "Busy", medicines: ["Paracetamol", "Amoxicillin", "Metronidazole"], doctors: ["Dr. Ssemakula", "Dr. Nabukenya"], distance: "5.5 km", openHours: "24/7", contact: "+256 414 567890" },
+    { id: 16, name: "Nakawa Health Centre", division: "Nakawa Division", lat: 0.3400, lng: 32.6100, medicineStatus: "Out of Stock", doctorStatus: "Off Duty", medicines: ["Paracetamol"], doctors: ["Dr. Mwebaze"], distance: "4.2 km", openHours: "8am-5pm", contact: "+256 752 789012" },
+    { id: 17, name: "Rubaga Community Clinic", division: "Rubaga Division", lat: 0.3080, lng: 32.5600, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Basic Drugs", "First Aid"], doctors: ["Dr. Kyeyune", "Dr. Nakanwagi"], distance: "4.0 km", openHours: "8am-6pm", contact: "+256 312 890123" },
+    { id: 18, name: "Mengo Hospital", division: "Rubaga Division", lat: 0.3150, lng: 32.5600, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Traditional Medicine", "Herbal Remedies", "Modern Drugs"], doctors: ["Dr. Kalema", "Dr. Nabatanzi"], distance: "4.5 km", openHours: "24/7", contact: "+256 414 901234" },
+    { id: 19, name: "Butabika National Referral Hospital", division: "Nakawa Division", lat: 0.3300, lng: 32.6400, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["Psychiatric Drugs", "Antidepressants"], doctors: ["Dr. Byakika", "Dr. Nantongo"], distance: "6.0 km", openHours: "24/7", contact: "+256 414 123456" },
+    { id: 20, name: "Nsamizi Hospital", division: "Rubaga Division", lat: 0.3000, lng: 32.5500, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["General Medicines", "Surgical Supplies"], doctors: ["Dr. Mugerwa", "Dr. Nalule"], distance: "5.0 km", openHours: "24/7", contact: "+256 414 123456" },
+    { id: 21, name: "Kisenyi Health Centre", division: "Central Division", lat: 0.3050, lng: 32.5750, medicineStatus: "Low Stock", doctorStatus: "Busy", medicines: ["Paracetamol", "First Aid"], doctors: ["Dr. Ssali"], distance: "2.2 km", openHours: "8am-6pm", contact: "+256 752 123456" },
+    { id: 22, name: "Lubaga Hospital", division: "Rubaga Division", lat: 0.3020, lng: 32.5580, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["General Medicines", "Emergency Drugs"], doctors: ["Dr. Ssenyonga", "Dr. Nabatanzi"], distance: "4.8 km", openHours: "24/7", contact: "+256 414 123789" },
+    { id: 23, name: "Naguru Hospital", division: "Nakawa Division", lat: 0.3380, lng: 32.6080, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["TB Drugs", "Antimalarials"], doctors: ["Dr. Olara", "Dr. Aciro"], distance: "3.5 km", openHours: "24/7", contact: "+256 414 123456" },
+    { id: 24, name: "Kibuli Hospital", division: "Makindye Division", lat: 0.3100, lng: 32.5920, medicineStatus: "Low Stock", doctorStatus: "Busy", medicines: ["Basic Drugs", "First Aid"], doctors: ["Dr. Mugerwa", "Dr. Nakanwagi"], distance: "3.0 km", openHours: "8am-9pm", contact: "+256 752 123789" },
+    { id: 25, name: "Mildmay Uganda Hospital", division: "Nakawa Division", lat: 0.3450, lng: 32.6150, medicineStatus: "In Stock", doctorStatus: "Available", medicines: ["HIV Drugs", "TB Medications"], doctors: ["Dr. Lule", "Dr. Namusoke"], distance: "4.5 km", openHours: "8am-5pm", contact: "+256 414 123456" }
+];
+
+// ============ 50+ MEDICINES ============
+const medicines = [
+    { name: "Artemisinin", condition: "Malaria", stock: "High", facilities: ["Mulago", "Rubaga", "Kiruddu", "Kisubi", "Kawempe"] },
+    { name: "Coartem", condition: "Malaria", stock: "Medium", facilities: ["Nsambya", "Kampala Hospital", "Kisubi", "Lubaga"] },
+    { name: "Paracetamol", condition: "Pain/Fever", stock: "High", facilities: ["All facilities"] },
+    { name: "Amoxicillin", condition: "Bacterial Infections", stock: "High", facilities: ["Mulago", "Rubaga", "Nsambya", "Kiruddu", "Mbuya", "Kisubi", "Kawempe", "Mengo", "Lubaga", "Naguru"] },
+    { name: "Metronidazole", condition: "Parasitic/Bacterial", stock: "Medium", facilities: ["Rubaga", "Mulago", "St. Francis", "Mengo"] },
+    { name: "Ciprofloxacin", condition: "Bacterial Infections", stock: "Medium", facilities: ["Rubaga", "International Hospital", "Kampala Hospital", "Naguru"] },
+    { name: "Quinine", condition: "Severe Malaria", stock: "Low", facilities: ["Mulago", "Kiruddu"] },
+    { name: "Ibuprofen", condition: "Pain/Inflammation", stock: "High", facilities: ["Nsambya", "Case Clinic", "International Hospital", "Kampala Hospital", "Kisubi"] },
+    { name: "Antiretrovirals", condition: "HIV/AIDS", stock: "Medium", facilities: ["Kiruddu", "Mulago", "Nsambya", "Kawempe", "Mildmay"] },
+    { name: "TB Drugs", condition: "Tuberculosis", stock: "Medium", facilities: ["Kiruddu", "Mulago", "Nsambya", "Kawempe", "Naguru"] },
+    { name: "Doxycycline", condition: "Bacterial/Parasitic", stock: "High", facilities: ["Rubaga", "International Hospital", "Mulago", "Kisubi"] },
+    { name: "Azithromycin", condition: "Bacterial Infections", stock: "High", facilities: ["Mulago", "International Hospital", "Kampala Hospital"] },
+    { name: "Ceftriaxone", condition: "Severe Infections", stock: "Medium", facilities: ["Mulago", "Kiruddu", "International Hospital"] },
+    { name: "Diclofenac", condition: "Pain/Inflammation", stock: "High", facilities: ["Nsambya", "Case Clinic", "Kampala Hospital", "Mbuya"] },
+    { name: "Omeprazole", condition: "Acid Reflux", stock: "High", facilities: ["Mulago", "Rubaga", "International Hospital", "Kawempe"] },
+    { name: "Losartan", condition: "High Blood Pressure", stock: "Medium", facilities: ["International Hospital", "Mulago", "Kiruddu"] },
+    { name: "Metformin", condition: "Diabetes", stock: "High", facilities: ["Mulago", "Kiruddu", "International Hospital", "Kawempe"] },
+    { name: "Salbutamol", condition: "Asthma", stock: "High", facilities: ["All major hospitals", "Kisubi", "Mengo"] },
+    { name: "Prednisolone", condition: "Inflammation", stock: "Medium", facilities: ["Mulago", "Rubaga", "International Hospital"] },
+    { name: "Furosemide", condition: "High Blood Pressure", stock: "Medium", facilities: ["Mulago", "Kiruddu", "Kawempe"] },
+    { name: "Captopril", condition: "Hypertension", stock: "Medium", facilities: ["International Hospital", "Rubaga", "Kampala Hospital"] },
+    { name: "Warfarin", condition: "Blood Clots", stock: "Low", facilities: ["Mulago", "International Hospital", "Kiruddu"] },
+    { name: "Hydrochlorothiazide", condition: "High Blood Pressure", stock: "High", facilities: ["Mulago", "Rubaga", "Kawempe"] },
+    { name: "Amlodipine", condition: "Hypertension", stock: "High", facilities: ["All major hospitals"] },
+    { name: "Atorvastatin", condition: "High Cholesterol", stock: "Medium", facilities: ["International Hospital", "Mulago", "Kampala Hospital"] },
+    { name: "Clopidogrel", condition: "Blood Clots", stock: "Medium", facilities: ["International Hospital", "Mulago"] },
+    { name: "Levothyroxine", condition: "Thyroid Disorders", stock: "Medium", facilities: ["Mulago", "International Hospital"] },
+    { name: "Insulin", condition: "Diabetes", stock: "Medium", facilities: ["Mulago", "Kiruddu", "International Hospital", "Kawempe"] },
+    { name: "Diazepam", condition: "Anxiety/Seizures", stock: "Medium", facilities: ["Mulago", "Butabika", "Kiruddu"] },
+    { name: "Fluoxetine", condition: "Depression", stock: "High", facilities: ["Butabika", "Mulago", "Nsambya"] },
+    { name: "Carbamazepine", condition: "Epilepsy", stock: "Medium", facilities: ["Butabika", "Mulago", "Kiruddu"] },
+    { name: "Morphine", condition: "Severe Pain", stock: "Low", facilities: ["Mulago", "International Hospital", "Kiruddu"] },
+    { name: "Tramadol", condition: "Moderate Pain", stock: "High", facilities: ["All major hospitals"] },
+    { name: "Vitamin B Complex", condition: "Vitamin Deficiency", stock: "High", facilities: ["All facilities"] },
+    { name: "Ferrous Sulfate", condition: "Anemia", stock: "High", facilities: ["All facilities"] },
+    { name: "Folic Acid", condition: "Pregnancy/Anemia", stock: "High", facilities: ["All facilities", "Kawempe", "Mbuya"] },
+    { name: "Cetirizine", condition: "Allergies", stock: "High", facilities: ["All major hospitals"] },
+    { name: "Loratadine", condition: "Allergies", stock: "High", facilities: ["Case Clinic", "Kampala Hospital"] },
+    { name: "Mebendazole", condition: "Worm Infections", stock: "High", facilities: ["All facilities"] },
+    { name: "Oral Rehydration Salts", condition: "Dehydration", stock: "High", facilities: ["All facilities"] },
+    { name: "Albendazole", condition: "Worm Infections", stock: "High", facilities: ["All facilities"] },
+    { name: "Chlorpheniramine", condition: "Allergies", stock: "High", facilities: ["All facilities"] },
+    { name: "Dextromethorphan", condition: "Cough", stock: "High", facilities: ["All major hospitals"] },
+    { name: "Guaifenesin", condition: "Chest Congestion", stock: "High", facilities: ["All major hospitals"] },
+    { name: "Loperamide", condition: "Diarrhea", stock: "High", facilities: ["All facilities"] },
+    { name: "Bisacodyl", condition: "Constipation", stock: "High", facilities: ["All facilities"] },
+    { name: "Hydrocortisone", condition: "Skin Inflammation", stock: "Medium", facilities: ["Mulago", "International Hospital"] },
+    { name: "Clotrimazole", condition: "Fungal Infections", stock: "High", facilities: ["All facilities"] },
+    { name: "Miconazole", condition: "Fungal Infections", stock: "High", facilities: ["All facilities"] },
+    { name: "Acyclovir", condition: "Viral Infections", stock: "Medium", facilities: ["Mulago", "International Hospital"] }
+];
+
+// ============ 54+ DOCTORS ============
+const doctors = [
+    { name: "Dr. Michael Okello", specialty: "General Physician", role: "Physician", email: "m.okello@khas.ug", contact: "+256 700 123456", facilities: ["Mulago Hospital", "Kiruddu Hospital", "Kawempe Hospital"], currentFacility: "Mulago Hospital", experience: "12 years" },
+    { name: "Dr. Sarah Namugenyi", specialty: "Pediatrician", role: "Pediatrician", email: "s.namugenyi@khas.ug", contact: "+256 700 123457", facilities: ["Mulago Hospital", "Kawempe Hospital", "Mbuya Hospital"], currentFacility: "Mulago Hospital", experience: "8 years" },
+    { name: "Dr. John Musoke", specialty: "Surgeon", role: "Surgeon", email: "j.musoke@khas.ug", contact: "+256 700 123458", facilities: ["Mulago Hospital", "International Hospital", "Kisubi Hospital"], currentFacility: "Mulago Hospital", experience: "15 years" },
+    { name: "Dr. Grace Namutebi", specialty: "General Physician", role: "Physician", email: "g.namutebi@khas.ug", contact: "+256 700 123460", facilities: ["Nsambya Hospital", "St. Francis Hospital", "Kampala Hospital"], currentFacility: "Nsambya Hospital", experience: "6 years" },
+    { name: "Dr. James Ssali", specialty: "Cardiologist", role: "Cardiologist", email: "j.ssali@khas.ug", contact: "+256 700 123461", facilities: ["Nsambya Hospital", "International Hospital", "Kampala Hospital"], currentFacility: "Nsambya Hospital", experience: "10 years" },
+    { name: "Dr. David Mukasa", specialty: "General Physician", role: "Physician", email: "d.mukasa@khas.ug", contact: "+256 700 123464", facilities: ["Rubaga Hospital", "Case Clinic", "Mengo Hospital"], currentFacility: "Rubaga Hospital", experience: "11 years" },
+    { name: "Dr. Florence Nakato", specialty: "Gynecologist", role: "Gynecologist", email: "f.nakato@khas.ug", contact: "+256 700 123465", facilities: ["Rubaga Hospital", "Mulago Hospital", "Kawempe Hospital"], currentFacility: "Rubaga Hospital", experience: "9 years" },
+    { name: "Dr. Peter Kwizera", specialty: "Pediatrician", role: "Pediatrician", email: "p.kwizera@khas.ug", contact: "+256 700 123466", facilities: ["Rubaga Hospital", "Kiruddu Hospital", "Mbuya Hospital"], currentFacility: "Rubaga Hospital", experience: "7 years" },
+    { name: "Dr. Robert Asiimwe", specialty: "Infectious Disease", role: "ID Specialist", email: "r.asiimwe@khas.ug", contact: "+256 700 123468", facilities: ["Kiruddu Hospital", "Mulago Hospital", "Nsambya Hospital"], currentFacility: "Kiruddu Hospital", experience: "14 years" },
+    { name: "Dr. Catherine Nabatanzi", specialty: "Internal Medicine", role: "Internist", email: "c.nabatanzi@khas.ug", contact: "+256 700 123469", facilities: ["Kiruddu Hospital", "Mulago Hospital", "International Hospital"], currentFacility: "Kiruddu Hospital", experience: "10 years" },
+    { name: "Dr. Henry Lugemwa", specialty: "HIV Specialist", role: "HIV Specialist", email: "h.lugemwa@khas.ug", contact: "+256 700 123470", facilities: ["Kiruddu Hospital", "Nsambya Hospital", "Kawempe Hospital"], currentFacility: "Kiruddu Hospital", experience: "12 years" },
+    { name: "Dr. Andrew Mutesasira", specialty: "General Practitioner", role: "GP", email: "a.mutesasira@khas.ug", contact: "+256 700 123471", facilities: ["Case Clinic", "Kampala Hospital", "Mbuya Hospital"], currentFacility: "Case Clinic", experience: "5 years" },
+    { name: "Dr. Edith Kemigisha", specialty: "Dermatologist", role: "Dermatologist", email: "e.kemigisha@khas.ug", contact: "+256 700 123472", facilities: ["Case Clinic", "International Hospital", "Kampala Hospital"], currentFacility: "Case Clinic", experience: "8 years" },
+    { name: "Dr. Paul Ochen", specialty: "Cardiothoracic Surgeon", role: "Cardiothoracic Surgeon", email: "p.ochen@khas.ug", contact: "+256 700 123474", facilities: ["International Hospital", "Mulago Hospital", "Kisubi Hospital"], currentFacility: "International Hospital", experience: "18 years" },
+    { name: "Dr. Beatrice Achieng", specialty: "Oncologist", role: "Oncologist", email: "b.achieng@khas.ug", contact: "+256 700 123475", facilities: ["International Hospital", "Mulago Hospital", "Kampala Hospital"], currentFacility: "International Hospital", experience: "12 years" },
+    { name: "Dr. Jane Nambooze", specialty: "Obstetrician", role: "Obstetrician/Midwife", email: "j.nambooze@khas.ug", contact: "+256 700 123480", facilities: ["Kawempe Hospital", "Mulago Hospital", "Mbuya Hospital"], currentFacility: "Kawempe Hospital", experience: "9 years" },
+    { name: "Dr. John Kalema", specialty: "Psychiatrist", role: "Psychiatrist", email: "j.kalema@khas.ug", contact: "+256 700 123481", facilities: ["Butabika Hospital", "Mulago Hospital"], currentFacility: "Butabika Hospital", experience: "16 years" },
+    { name: "Dr. Grace Ssali", specialty: "Neurologist", role: "Neurologist", email: "g.ssali@khas.ug", contact: "+256 700 123482", facilities: ["Mulago Hospital", "International Hospital", "Kiruddu Hospital"], currentFacility: "Mulago Hospital", experience: "13 years" },
+    { name: "Dr. Joseph Wasswa", specialty: "ENT Specialist", role: "ENT Specialist", email: "j.wasswa@khas.ug", contact: "+256 700 123505", facilities: ["Case Clinic", "Mulago Hospital"], currentFacility: "Case Clinic", experience: "9 years" },
+    { name: "Dr. David Ssebunya", specialty: "Dentist", role: "Dentist", email: "d.ssebunya@khas.ug", contact: "+256 700 123512", facilities: ["Mbuya Hospital", "Kampala Hospital"], currentFacility: "Mbuya Hospital", experience: "8 years" },
+    { name: "Sr. Mary Nakawooya", specialty: "Midwife", role: "Certified Midwife", email: "m.nakawooya@khas.ug", contact: "+256 700 123500", facilities: ["Nsambya Hospital", "Kawempe Hospital"], currentFacility: "Nsambya Hospital", experience: "14 years" },
+    { name: "Dr. Joseph Katumba", specialty: "General Surgeon", role: "Surgeon", email: "j.katumba@khas.ug", contact: "+256 700 123494", facilities: ["Kisubi Hospital", "Rubaga Hospital"], currentFacility: "Kisubi Hospital", experience: "12 years" },
+    { name: "Dr. Charles Ssekandi", specialty: "Orthopedic Surgeon", role: "Orthopedic Surgeon", email: "c.ssekandi@khas.ug", contact: "+256 700 123495", facilities: ["Kampala Hospital", "International Hospital"], currentFacility: "Kampala Hospital", experience: "14 years" },
+    { name: "Dr. Edward Mugerwa", specialty: "Neurosurgeon", role: "Neurosurgeon", email: "e.mugerwa@khas.ug", contact: "+256 700 123496", facilities: ["Mulago Hospital", "International Hospital"], currentFacility: "Mulago Hospital", experience: "16 years" },
+    { name: "Dr. Robert Mubiru", specialty: "Cardiologist", role: "Cardiologist", email: "r.mubiru@khas.ug", contact: "+256 700 123497", facilities: ["International Hospital", "Mulago Hospital"], currentFacility: "International Hospital", experience: "11 years" },
+    { name: "Dr. Grace Nakalembe", specialty: "Gynecologist", role: "Gynecologist", email: "g.nakalembe@khas.ug", contact: "+256 700 123498", facilities: ["Kampala Hospital", "Nsambya Hospital"], currentFacility: "Kampala Hospital", experience: "8 years" },
+    { name: "Sr. Grace Nassali", specialty: "Midwife", role: "Senior Midwife", email: "g.nassali@khas.ug", contact: "+256 700 123501", facilities: ["Kawempe Hospital", "Mbuya Hospital"], currentFacility: "Kawempe Hospital", experience: "11 years" },
+    { name: "Dr. Peter Mukasa", specialty: "Urologist", role: "Urologist", email: "p.mukasa@khas.ug", contact: "+256 700 123514", facilities: ["Mulago Hospital", "Rubaga Hospital"], currentFacility: "Mulago Hospital", experience: "11 years" },
+    { name: "Dr. Grace Nabatanzi", specialty: "Nephrologist", role: "Nephrologist", email: "g.nabatanzi@khas.ug", contact: "+256 700 123515", facilities: ["Kiruddu Hospital", "Mulago Hospital"], currentFacility: "Kiruddu Hospital", experience: "9 years" },
+    { name: "Dr. Intern James Kato", specialty: "Intern Doctor", role: "Medical Intern", email: "j.kato@khas.ug", contact: "+256 700 123520", facilities: ["Mulago Hospital", "Kiruddu Hospital"], currentFacility: "Mulago Hospital", experience: "1 year" },
+    { name: "Dr. Intern Sarah Nakanwagi", specialty: "Intern Doctor", role: "Medical Intern", email: "s.nakanwagi@khas.ug", contact: "+256 700 123521", facilities: ["Nsambya Hospital", "Rubaga Hospital"], currentFacility: "Nsambya Hospital", experience: "6 months" },
+    { name: "Dr. Intern Peter Wasswa", specialty: "Intern Doctor", role: "Medical Intern", email: "p.wasswa@khas.ug", contact: "+256 700 123522", facilities: ["Kawempe Hospital", "Mbuya Hospital"], currentFacility: "Kawempe Hospital", experience: "8 months" },
+    { name: "Dr. Intern Grace Nalule", specialty: "Intern Doctor", role: "Medical Intern", email: "g.nalule@khas.ug", contact: "+256 700 123523", facilities: ["Kisubi Hospital", "St. Francis Hospital"], currentFacility: "Kisubi Hospital", experience: "4 months" },
+    { name: "Dr. Mary Achieng", specialty: "Pediatrician", role: "Pediatrician", email: "m.achieng@khas.ug", contact: "+256 700 123530", facilities: ["Naguru Hospital", "Mulago Hospital"], currentFacility: "Naguru Hospital", experience: "7 years" },
+    { name: "Dr. John Ssenyonga", specialty: "General Physician", role: "Physician", email: "j.ssenyonga@khas.ug", contact: "+256 700 123531", facilities: ["Lubaga Hospital", "Rubaga Hospital"], currentFacility: "Lubaga Hospital", experience: "9 years" },
+    { name: "Dr. Grace Olara", specialty: "Pulmonologist", role: "Lung Specialist", email: "g.olara@khas.ug", contact: "+256 700 123532", facilities: ["Naguru Hospital", "Kiruddu Hospital"], currentFacility: "Naguru Hospital", experience: "11 years" },
+    { name: "Dr. James Mugerwa", specialty: "General Surgeon", role: "Surgeon", email: "j.mugerwa@khas.ug", contact: "+256 700 123533", facilities: ["Kibuli Hospital", "Nsambya Hospital"], currentFacility: "Kibuli Hospital", experience: "10 years" },
+    { name: "Dr. Sarah Nakanwagi", specialty: "Pediatrician", role: "Pediatrician", email: "s.nakanwagi2@khas.ug", contact: "+256 700 123534", facilities: ["Kibuli Hospital", "Kawempe Hospital"], currentFacility: "Kibuli Hospital", experience: "6 years" },
+    { name: "Dr. Joseph Olara", specialty: "Cardiologist", role: "Cardiologist", email: "j.olara@khas.ug", contact: "+256 700 123535", facilities: ["Lubaga Hospital", "International Hospital"], currentFacility: "Lubaga Hospital", experience: "13 years" },
+    { name: "Dr. Grace Aciro", specialty: "Gynecologist", role: "Gynecologist", email: "g.aciro@khas.ug", contact: "+256 700 123536", facilities: ["Naguru Hospital", "Mulago Hospital"], currentFacility: "Naguru Hospital", experience: "8 years" },
+    { name: "Dr. Michael Ssenyonga", specialty: "Neurologist", role: "Neurologist", email: "m.ssenyonga@khas.ug", contact: "+256 700 123537", facilities: ["Lubaga Hospital", "Mulago Hospital"], currentFacility: "Lubaga Hospital", experience: "12 years" },
+    { name: "Dr. Beatrice Nalule", specialty: "Dermatologist", role: "Dermatologist", email: "b.nalule@khas.ug", contact: "+256 700 123538", facilities: ["Kibuli Hospital", "Case Clinic"], currentFacility: "Kibuli Hospital", experience: "7 years" },
+    { name: "Dr. Peter Olara", specialty: "Orthopedic Surgeon", role: "Orthopedic Surgeon", email: "p.olara@khas.ug", contact: "+256 700 123539", facilities: ["Naguru Hospital", "International Hospital"], currentFacility: "Naguru Hospital", experience: "15 years" },
+    { name: "Dr. Sarah Mugerwa", specialty: "Psychiatrist", role: "Psychiatrist", email: "s.mugerwa@khas.ug", contact: "+256 700 123540", facilities: ["Butabika Hospital", "Nsambya Hospital"], currentFacility: "Butabika Hospital", experience: "10 years" },
+    { name: "Dr. Joseph Nakanwagi", specialty: "ENT Specialist", role: "ENT Specialist", email: "j.nakanwagi@khas.ug", contact: "+256 700 123541", facilities: ["Lubaga Hospital", "Case Clinic"], currentFacility: "Lubaga Hospital", experience: "9 years" },
+    { name: "Dr. Grace Kato", specialty: "Ophthalmologist", role: "Eye Doctor", email: "g.kato@khas.ug", contact: "+256 700 123542", facilities: ["Kibuli Hospital", "Mulago Hospital"], currentFacility: "Kibuli Hospital", experience: "11 years" },
+    { name: "Dr. Michael Aciro", specialty: "Urologist", role: "Urologist", email: "m.aciro@khas.ug", contact: "+256 700 123543", facilities: ["Naguru Hospital", "Rubaga Hospital"], currentFacility: "Naguru Hospital", experience: "10 years" },
+    { name: "Dr. Beatrice Wasswa", specialty: "Nephrologist", role: "Kidney Specialist", email: "b.wasswa@khas.ug", contact: "+256 700 123544", facilities: ["Kiruddu Hospital", "Mulago Hospital"], currentFacility: "Kiruddu Hospital", experience: "9 years" },
+    { name: "Dr. Samuel Lule", specialty: "HIV Specialist", role: "HIV Specialist", email: "s.lule@khas.ug", contact: "+256 700 123545", facilities: ["Mildmay Hospital", "Kiruddu Hospital"], currentFacility: "Mildmay Hospital", experience: "10 years" },
+    { name: "Dr. Rebecca Namusoke", specialty: "Pediatrician", role: "Pediatrician", email: "r.namusoke@khas.ug", contact: "+256 700 123546", facilities: ["Mildmay Hospital", "Mulago Hospital"], currentFacility: "Mildmay Hospital", experience: "7 years" },
+    { name: "Dr. Christopher Kiggundu", specialty: "General Physician", role: "Physician", email: "c.kiggundu@khas.ug", contact: "+256 700 123547", facilities: ["Kibuli Hospital", "Nsambya Hospital"], currentFacility: "Kibuli Hospital", experience: "8 years" },
+    { name: "Dr. Esther Nalubega", specialty: "Dentist", role: "Dentist", email: "e.nalubega@khas.ug", contact: "+256 700 123548", facilities: ["Kampala Hospital", "Case Clinic"], currentFacility: "Kampala Hospital", experience: "6 years" },
+    { name: "Dr. Patrick Wasswa", specialty: "Surgeon", role: "Surgeon", email: "p.wasswa@khas.ug", contact: "+256 700 123549", facilities: ["International Hospital", "Rubaga Hospital"], currentFacility: "International Hospital", experience: "13 years" },
+    { name: "Dr. Josephine Nakato", specialty: "Gynecologist", role: "Gynecologist", email: "j.nakato@khas.ug", contact: "+256 700 123550", facilities: ["Kawempe Hospital", "Mbuya Hospital"], currentFacility: "Kawempe Hospital", experience: "8 years" }
+];
+
+let currentUser = null;
+let currentView = 'dashboard';
+let map = null;
+let slideIndex = 0;
+let slideInterval;
+let inactivityTimer = null;
+
+// ============ USER PROFILE FUNCTIONS ============
+function updateAuthSection() {
+    const authSection = document.getElementById('authSection');
+    if (!authSection) return;
+    
+    if (currentUser) {
+        const firstName = currentUser.firstName || currentUser.fullName?.split(' ')[0] || currentUser.email?.split('@')[0] || 'User';
+        const initial = firstName.charAt(0).toUpperCase();
+        
+        authSection.innerHTML = `
+            <div class="user-profile">
+                <div class="user-avatar">${initial}</div>
+                <div class="user-info">
+                    <span class="user-name">${firstName}</span>
+                    <span class="user-welcome">Welcome back!</span>
+                </div>
+                <button class="logout-btn-nav" onclick="showLogoutModal()">Logout</button>
+            </div>
+        `;
+    } else {
+        authSection.innerHTML = `<button class="login-btn" onclick="showAuthModal()">Login / Sign Up</button>`;
+    }
+}
+
+// ============ LOGOUT MODAL FUNCTIONS ============
+function showLogoutModal() {
+    document.getElementById('logoutModal').classList.add('active');
+}
+
+function closeLogoutModal() {
+    document.getElementById('logoutModal').classList.remove('active');
+}
+
+function confirmLogout() {
+    closeLogoutModal();
+    stopActivityTracking();
+    auth.signOut().then(() => {
+        currentUser = null;
+        localStorage.removeItem('khas_user');
+        updateAuthSection();
+        goToHomePage();
+        showToast('Logged out successfully');
+    }).catch(() => {
+        currentUser = null;
+        goToHomePage();
+        showToast('Logged out');
+    });
+}
+
+// ============ AUTH FUNCTIONS ============
+function showAuthModal() { 
+    document.getElementById('loginView').style.display = 'block';
+    document.getElementById('registerView').style.display = 'none';
+    document.getElementById('forgotPasswordView').style.display = 'none';
+    document.getElementById('authModal').classList.add('active'); 
+}
+function closeAuthModal() { document.getElementById('authModal').classList.remove('active'); }
+function showRegisterView() { 
+    document.getElementById('loginView').style.display = 'none'; 
+    document.getElementById('registerView').style.display = 'block';
+    document.getElementById('forgotPasswordView').style.display = 'none';
+}
+function showLoginView() { 
+    document.getElementById('registerView').style.display = 'none'; 
+    document.getElementById('loginView').style.display = 'block';
+    document.getElementById('forgotPasswordView').style.display = 'none';
+}
+function showForgotPasswordView() {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('registerView').style.display = 'none';
+    document.getElementById('forgotPasswordView').style.display = 'block';
+    document.getElementById('resetEmail').value = '';
+    document.getElementById('resetError').innerHTML = '';
+    document.getElementById('resetSuccess').innerHTML = '';
+}
+
+function showToast(msg) { 
+    let toast = document.createElement('div'); 
+    toast.className = 'toast'; 
+    toast.innerHTML = '<i class="fas fa-info-circle"></i> ' + msg; 
+    document.body.appendChild(toast); 
+    setTimeout(() => toast.remove(), 3000); 
+}
+
+function resetInactivityTimer() {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        if (currentUser) {
+            showLogoutModal();
+        }
+    }, 900000);
+}
+
+function startActivityTracking() {
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => {
+        document.addEventListener(event, resetInactivityTimer);
+    });
+    resetInactivityTimer();
+}
+
+function stopActivityTracking() {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => {
+        document.removeEventListener(event, resetInactivityTimer);
+    });
+}
+
+function storePhoneMapping(phone, email) {
+    const users = JSON.parse(localStorage.getItem('khas_users_map') || '{}');
+    users[phone] = email;
+    localStorage.setItem('khas_users_map', JSON.stringify(users));
+}
+
+function sendPasswordReset() {
+    const email = document.getElementById('resetEmail').value;
+    const errorDiv = document.getElementById('resetError');
+    const successDiv = document.getElementById('resetSuccess');
+    
+    errorDiv.innerHTML = '';
+    successDiv.innerHTML = '';
+    
+    if (!email || !email.includes('@')) {
+        errorDiv.innerHTML = 'Please enter a valid email address';
+        return;
+    }
+    
+    auth.sendPasswordResetEmail(email)
+        .then(() => {
+            successDiv.innerHTML = 'Password reset link sent to your email! Check your inbox.';
+            setTimeout(() => {
+                showLoginView();
+            }, 3000);
+        })
+        .catch((error) => {
+            if (error.code === 'auth/user-not-found') {
+                errorDiv.innerHTML = 'No account found with this email address.';
+            } else {
+                errorDiv.innerHTML = error.message;
+            }
+        });
+}
+
+function register() {
+    const firstName = document.getElementById('regFirstName').value;
+    const lastName = document.getElementById('regLastName').value;
+    const email = document.getElementById('regEmail').value;
+    const phone = document.getElementById('regPhone').value;
+    const password = document.getElementById('regPassword').value;
+    const confirmPassword = document.getElementById('regConfirmPassword').value;
+    const errorDiv = document.getElementById('registerError');
+    
+    errorDiv.innerHTML = '';
+    
+    if (!firstName || !lastName) {
+        errorDiv.innerHTML = 'Please enter your first and last name';
+        return;
+    }
+    if (!email || !email.includes('@')) {
+        errorDiv.innerHTML = 'Please enter a valid email address';
+        return;
+    }
+    if (!phone || !phone.match(/^\+256\d{9}$/)) {
+        errorDiv.innerHTML = 'Phone must start with +256 followed by 9 digits (e.g., +256789352662)';
+        return;
+    }
+    if (password.length < 6) {
+        errorDiv.innerHTML = 'Password must be at least 6 characters';
+        return;
+    }
+    if (password !== confirmPassword) {
+        errorDiv.innerHTML = 'Passwords do not match';
+        return;
+    }
+    
+    auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            storePhoneMapping(phone, email);
+            
+            const userData = {
+                uid: userCredential.user.uid,
+                email: email,
+                firstName: firstName,
+                lastName: lastName,
+                phone: phone,
+                fullName: firstName + ' ' + lastName
+            };
+            localStorage.setItem('khas_user', JSON.stringify(userData));
+            
+            document.getElementById('regFirstName').value = '';
+            document.getElementById('regLastName').value = '';
+            document.getElementById('regEmail').value = '';
+            document.getElementById('regPhone').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regConfirmPassword').value = '';
+            
+            showToast('Registration successful! Please login with your credentials.');
+            showLoginView();
+        })
+        .catch((error) => {
+            if (error.code === 'auth/email-already-in-use') {
+                errorDiv.innerHTML = 'Email already registered. Please login.';
+            } else {
+                errorDiv.innerHTML = error.message;
+            }
+        });
+}
+
+function login() {
+    const identifier = document.getElementById('loginIdentifier').value;
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    
+    errorDiv.innerHTML = '';
+    
+    if (!identifier || !password) {
+        errorDiv.innerHTML = 'Please enter email/phone and password';
+        return;
+    }
+    
+    let email = identifier;
+    if (!identifier.includes('@')) {
+        const usersMap = JSON.parse(localStorage.getItem('khas_users_map') || '{}');
+        if (usersMap[identifier]) {
+            email = usersMap[identifier];
+        } else {
+            errorDiv.innerHTML = 'Phone number not found. Please register or use email.';
+            return;
+        }
+    }
+    
+    auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            const user = userCredential.user;
+            let savedUser = localStorage.getItem('khas_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+            } else {
+                const usersMap = JSON.parse(localStorage.getItem('khas_users_map') || '{}');
+                let phone = Object.keys(usersMap).find(key => usersMap[key] === email);
+                currentUser = { 
+                    uid: user.uid, 
+                    email: user.email, 
+                    phone: phone || '',
+                    firstName: user.email.split('@')[0],
+                    fullName: user.email.split('@')[0]
+                };
+                localStorage.setItem('khas_user', JSON.stringify(currentUser));
+            }
+            
+            document.getElementById('loginIdentifier').value = '';
+            document.getElementById('loginPassword').value = '';
+            closeAuthModal();
+            updateAuthSection();
+            startActivityTracking();
+            if (window.pendingFeature) {
+                navigateToFeature(window.pendingFeature);
+                window.pendingFeature = null;
+            } else {
+                showDashboardHome();
+            }
+            showToast('Login successful! Welcome ' + (currentUser.firstName || currentUser.fullName || currentUser.email));
+        })
+        .catch((error) => {
+            if (error.code === 'auth/user-not-found') {
+                errorDiv.innerHTML = 'No account found. Please register.';
+            } else if (error.code === 'auth/wrong-password') {
+                errorDiv.innerHTML = 'Incorrect password. Use "Forgot Password" to reset.';
+            } else {
+                errorDiv.innerHTML = error.message;
+            }
+        });
+}
+
+function logout() {
+    showLogoutModal();
+}
+
+function checkAuthAndNavigate(feature) {
+    if (!currentUser) { 
+        window.pendingFeature = feature; 
+        showAuthModal(); 
+        showToast('Please login first'); 
+    } else { 
+        navigateToFeature(feature); 
+    }
+}
+
+function goToDashboardHome() {
+    if (currentUser) {
+        showDashboardHome();
+    } else {
+        goToHomePage();
+    }
+}
+
+function goToHomePage() {
+    if (document.getElementById('dashboardContainer').style.display === 'block') {
+        document.getElementById('dashboardContainer').style.display = 'none';
+    }
+    document.querySelector('.navbar').style.display = 'flex';
+    document.querySelector('.hero-slider').style.display = 'block';
+    document.querySelectorAll('.section').forEach(s => s.style.display = 'block');
+    document.querySelector('.footer').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    updateAuthSection();
+}
+
+function navigateToFeature(feature) {
+    document.querySelector('.navbar').style.display = 'none';
+    document.querySelector('.hero-slider').style.display = 'none';
+    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+    document.querySelector('.footer').style.display = 'none';
+    currentView = feature;
+    renderDashboard(feature);
+}
+
+function showDashboardHome() {
+    document.querySelector('.navbar').style.display = 'none';
+    document.querySelector('.hero-slider').style.display = 'none';
+    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+    document.querySelector('.footer').style.display = 'none';
+    currentView = 'dashboard';
+    renderDashboardHomePage();
+}
+
+function renderDashboardHomePage() {
+    let container = document.getElementById('dashboardContainer');
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="dashboard-container">
+            <div class="dashboard-header">
+                <div><h2>KHAS Healthcare</h2></div>
+                <div class="dashboard-nav">
+                    <a onclick="goToHomePage()"><i class="fas fa-home"></i> Landing Home</a>
+                    <a onclick="navigateToFeature('facilities')"><i class="fas fa-hospital"></i> Facilities (${facilities.length})</a>
+                    <a onclick="navigateToFeature('medicines')"><i class="fas fa-pills"></i> Drugs (${medicines.length})</a>
+                    <a onclick="navigateToFeature('doctors')"><i class="fas fa-user-md"></i> Doctors (${doctors.length})</a>
+                    <button class="login-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <div class="dashboard-content">
+                <div class="map-container" id="homeMapContainer"><div id="homeMap" style="height:100%;width:100%;"></div></div>
+                <div class="info-cards">
+                    <div class="info-card" onclick="navigateToFeature('facilities')"><i class="fas fa-hospital"></i><h3>Find Nearest Facility</h3><p>${facilities.length}+ Health facilities near you</p></div>
+                    <div class="info-card" onclick="navigateToFeature('medicines')"><i class="fas fa-pills"></i><h3>Check Drug Availability</h3><p>${medicines.length}+ Medicines in stock</p></div>
+                    <div class="info-card" onclick="navigateToFeature('doctors')"><i class="fas fa-user-md"></i><h3>Find Available Doctors</h3><p>${doctors.length}+ Qualified doctors</p></div>
+                </div>
+            </div>
+            <footer class="footer" style="margin-top: auto;">${getFooterHTML()}</footer>
+        </div>
+    `;
+    setTimeout(() => { initHomeMap(); }, 100);
+}
+
+function getFooterHTML() {
+    return `
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Kampala Health Access System (KHAS)</h4>
+                <p>Making healthcare accessible to all Kampala residents.</p>
+            </div>
+            <div class="footer-section">
+                <h4>Quick Links</h4>
+                <div class="quick-links-grid">
+                    <a onclick="goToHomePage()">Home</a>
+                    <a onclick="scrollToOffer()">About</a>
+                    <a onclick="navigateToFeature('facilities')">Facilities</a>
+                    <a onclick="navigateToFeature('medicines')">Drugs</a>
+                    <a class="full-width" onclick="navigateToFeature('doctors')">Doctors</a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h4>Contact</h4>
+                <div class="contact-item"><i class="fas fa-phone-alt"></i> +256 789352662 / +256 766714967</div>
+                <div class="contact-item"><i class="fas fa-envelope"></i> opolotnelson1@gmail.com</div>
+                <div class="student-id"><i class="fas fa-id-card"></i> Student ID: PLP-AIS-2602-15209</div>
+            </div>
+            <div class="footer-section">
+                <h4>Follow Us</h4>
+                <div class="social-links">
+                    <a href="https://www.facebook.com/NsonNelly" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://x.com/OpolotNelson" target="_blank"><i class="fab fa-twitter"></i></a>
+                    <a href="https://www.linkedin.com/in/opolot-nelson-330513257/" target="_blank"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="https://www.youtube.com/@opolotnelson1999" target="_blank"><i class="fab fa-youtube"></i></a>
+                </div>
+                <div class="social-handle">@OpolotNelson</div>
+            </div>
+        </div>
+        <div class="copyright">© 2026 KHAS Healthcare. All rights reserved.</div>
+    `;
+}
+
+function initHomeMap() {
+    const mapContainer = document.getElementById('homeMap');
+    if (!mapContainer || typeof L === 'undefined') return;
+    try {
+        let centerLat = 0.3476, centerLng = 32.5825;
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => { createHomeMap(position.coords.latitude, position.coords.longitude); },
+                () => { createHomeMap(centerLat, centerLng); showToast('Using default location'); }
+            );
+        } else { createHomeMap(centerLat, centerLng); }
+    } catch (error) { console.error('Map error:', error); }
+}
+
+function createHomeMap(lat, lng) {
+    const mapContainer = document.getElementById('homeMap');
+    if (!mapContainer) return;
+    mapContainer.innerHTML = '';
+    map = L.map('homeMap').setView([lat, lng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+    facilities.forEach(facility => {
+        L.marker([facility.lat, facility.lng]).addTo(map).bindPopup(`<b>${facility.name}</b><br>${facility.division}<br>Medicines: ${facility.medicineStatus}<br>Doctors: ${facility.doctorStatus}`);
+    });
+    setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+}
+
+function renderDashboard(feature) {
+    let container = document.getElementById('dashboardContainer');
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="dashboard-container">
+            <div class="dashboard-header">
+                <div><h2>KHAS Healthcare</h2></div>
+                <div class="dashboard-nav">
+                    <a onclick="goToDashboardHome()"><i class="fas fa-tachometer-alt"></i> Dashboard Home</a>
+                    <a onclick="goToHomePage()"><i class="fas fa-home"></i> Landing Home</a>
+                    <a onclick="navigateToFeature('facilities')"><i class="fas fa-hospital"></i> Facilities (${facilities.length})</a>
+                    <a onclick="navigateToFeature('medicines')"><i class="fas fa-pills"></i> Drugs (${medicines.length})</a>
+                    <a onclick="navigateToFeature('doctors')"><i class="fas fa-user-md"></i> Doctors (${doctors.length})</a>
+                    <button class="login-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <div class="dashboard-content">
+                <div class="search-bar"><input type="text" id="searchInput" placeholder="Search facilities, medicines, or doctors..."></div>
+                <div id="resultsContainer"></div>
+            </div>
+            <footer class="footer" style="margin-top: auto;">${getFooterHTML()}</footer>
+        </div>
+    `;
+    document.getElementById('searchInput').addEventListener('input', (e) => { window.searchQuery = e.target.value.toLowerCase(); renderResults(feature); });
+    window.searchQuery = '';
+    renderResults(feature);
+}
+
+function renderResults(feature) {
+    let query = window.searchQuery || '';
+    let container = document.getElementById('resultsContainer');
+    if (feature === 'facilities') {
+        let filtered = facilities.filter(f => f.name.toLowerCase().includes(query) || f.medicines.some(m => m.toLowerCase().includes(query)));
+        container.innerHTML = `<div class="facility-grid">` + filtered.map(f => `
+            <div class="facility-card" onclick="showFacilityDetail(${f.id})">
+                <div class="facility-name"><i class="fas fa-hospital"></i> ${f.name}</div>
+                <div class="facility-details">
+                    <div class="detail-item"><i class="fas fa-map-marker-alt"></i> ${f.division}</div>
+                    <div class="detail-item"><i class="fas fa-clock"></i> ${f.openHours}</div>
+                    <div class="detail-item"><i class="fas fa-pills"></i> <span class="status-badge ${f.medicineStatus === 'In Stock' ? 'in-stock' : f.medicineStatus === 'Low Stock' ? 'low-stock' : 'out-stock'}">${f.medicineStatus}</span></div>
+                    <div class="detail-item"><i class="fas fa-user-md"></i> <span class="status-badge ${f.doctorStatus === 'Available' ? 'available' : f.doctorStatus === 'Busy' ? 'busy' : 'off-duty'}">${f.doctorStatus}</span></div>
+                </div>
+                <div class="detail-item"><i class="fas fa-phone-alt"></i> ${f.contact}</div>
+            </div>
+        `).join('') + `</div>`;
+        if (filtered.length === 0) container.innerHTML = '<div class="card">No facilities found</div>';
+    }
+    else if (feature === 'medicines') {
+        let filtered = medicines.filter(m => m.name.toLowerCase().includes(query) || m.condition.toLowerCase().includes(query));
+        container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:1.5rem;">` + filtered.map(m => `
+            <div class="medicine-card" onclick="showMedicineDetail('${m.name}')">
+                <div class="medicine-name"><i class="fas fa-pills"></i> ${m.name}</div>
+                <div class="detail-item"><i class="fas fa-stethoscope"></i> Treats: ${m.condition}</div>
+                <div class="detail-item"><i class="fas fa-chart-line"></i> Stock: <span class="status-badge ${m.stock === 'High' ? 'in-stock' : 'low-stock'}">${m.stock}</span></div>
+                <div class="detail-item"><i class="fas fa-hospital"></i> Available at: ${m.facilities.join(', ')}</div>
+            </div>
+        `).join('') + `</div>`;
+        if (filtered.length === 0) container.innerHTML = '<div class="card">No medicines found</div>';
+    }
+    else if (feature === 'doctors') {
+        let filtered = doctors.filter(d => d.name.toLowerCase().includes(query) || d.specialty.toLowerCase().includes(query));
+        container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:1.5rem;">` + filtered.map(d => `
+            <div class="doctor-card" onclick="showDoctorDetail('${d.name}')">
+                <div class="doctor-name"><i class="fas fa-user-md"></i> ${d.name}</div>
+                <div class="detail-item"><i class="fas fa-stethoscope"></i> ${d.specialty}</div>
+                <div class="detail-item"><i class="fas fa-building"></i> ${d.currentFacility}</div>
+                <div class="detail-item"><i class="fas fa-star"></i> ${d.experience}</div>
+            </div>
+        `).join('') + `</div>`;
+        if (filtered.length === 0) container.innerHTML = '<div class="card">No doctors found</div>';
+    }
+}
+
+function showFacilityDetail(id) {
+    let facility = facilities.find(f => f.id === id);
+    let container = document.getElementById('resultsContainer');
+    container.innerHTML = `
+        <button class="back-btn" onclick="renderResults('facilities')"><i class="fas fa-arrow-left"></i> Back</button>
+        <div class="detail-wrapper">
+            <div class="detail-info">
+                <div class="detail-header"><i class="fas fa-hospital"></i><h2>${facility.name}</h2></div>
+                <div class="detail-grid">
+                    <div class="detail-card"><h4><i class="fas fa-map-marker-alt"></i> Location</h4><p>Division: ${facility.division}</p><p>Distance: ${facility.distance}</p></div>
+                    <div class="detail-card"><h4><i class="fas fa-clock"></i> Hours</h4><p>${facility.openHours}</p><p><i class="fas fa-phone-alt"></i> ${facility.contact}</p></div>
+                    <div class="detail-card"><h4><i class="fas fa-pills"></i> Medicines</h4><p><span class="status-badge ${facility.medicineStatus === 'In Stock' ? 'in-stock' : 'low-stock'}">${facility.medicineStatus}</span></p><p>${facility.medicines.join(', ')}</p></div>
+                    <div class="detail-card"><h4><i class="fas fa-user-md"></i> Doctors</h4><p><span class="status-badge ${facility.doctorStatus === 'Available' ? 'available' : 'busy'}">${facility.doctorStatus}</span></p><p>${facility.doctors.join(', ')}</p></div>
+                </div>
+            </div>
+            <div class="detail-map"><div class="map-container" style="height:400px;"><div id="facilityMap" style="height:100%;width:100%;"></div></div></div>
+        </div>
+    `;
+    setTimeout(() => {
+        let facilityMap = L.map('facilityMap').setView([facility.lat, facility.lng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(facilityMap);
+        L.marker([facility.lat, facility.lng]).addTo(facilityMap).bindPopup(`<b>${facility.name}</b>`).openPopup();
+        setTimeout(() => { facilityMap.invalidateSize(); }, 100);
+    }, 100);
+}
+
+function showMedicineDetail(name) {
+    let medicine = medicines.find(m => m.name === name);
+    let container = document.getElementById('resultsContainer');
+    container.innerHTML = `
+        <button class="back-btn" onclick="renderResults('medicines')"><i class="fas fa-arrow-left"></i> Back</button>
+        <div class="detail-view">
+            <div class="detail-header"><i class="fas fa-pills"></i><h2>${medicine.name}</h2></div>
+            <div class="detail-grid">
+                <div class="detail-card"><h4><i class="fas fa-stethoscope"></i> Treatment</h4><p>Treats: ${medicine.condition}</p></div>
+                <div class="detail-card"><h4><i class="fas fa-chart-line"></i> Stock Level</h4><p><span class="status-badge ${medicine.stock === 'High' ? 'in-stock' : 'low-stock'}">${medicine.stock}</span></p></div>
+                <div class="detail-card"><h4><i class="fas fa-hospital"></i> Available At</h4><p>${medicine.facilities.join(', ')}</p></div>
+            </div>
+            <p><strong>Note:</strong> Call the facility before visiting to confirm current stock availability.</p>
+        </div>
+    `;
+}
+
+function showDoctorDetail(name) {
+    let doctor = doctors.find(d => d.name === name);
+    let container = document.getElementById('resultsContainer');
+    container.innerHTML = `
+        <button class="back-btn" onclick="renderResults('doctors')"><i class="fas fa-arrow-left"></i> Back</button>
+        <div class="detail-view">
+            <div class="detail-header"><i class="fas fa-user-md"></i><h2>${doctor.name}</h2></div>
+            <div class="detail-grid">
+                <div class="detail-card"><h4><i class="fas fa-stethoscope"></i> Specialty</h4><p>${doctor.specialty}</p><p>Role: ${doctor.role}</p></div>
+                <div class="detail-card"><h4><i class="fas fa-building"></i> Current Facility</h4><p>${doctor.currentFacility}</p><p>Experience: ${doctor.experience}</p></div>
+                <div class="detail-card"><h4><i class="fas fa-envelope"></i> Contact</h4><p>Email: ${doctor.email}</p><p><i class="fas fa-phone-alt"></i> ${doctor.contact}</p></div>
+                <div class="detail-card"><h4><i class="fas fa-hospital"></i> Works At</h4><p>${doctor.facilities.join(', ')}</p></div>
+            </div>
+        </div>
+    `;
+}
+
+function startSlider() { 
+    slideInterval = setInterval(() => { 
+        let slides = document.querySelectorAll('.slide'); 
+        let dots = document.querySelectorAll('.dot'); 
+        slides[slideIndex].classList.remove('active'); 
+        dots[slideIndex].classList.remove('active'); 
+        slideIndex = (slideIndex + 1) % slides.length; 
+        slides[slideIndex].classList.add('active'); 
+        dots[slideIndex].classList.add('active'); 
+    }, 5000); 
+}
+function currentSlide(index) { 
+    let slides = document.querySelectorAll('.slide'); 
+    let dots = document.querySelectorAll('.dot'); 
+    slides[slideIndex].classList.remove('active'); 
+    dots[slideIndex].classList.remove('active'); 
+    slideIndex = index; 
+    slides[slideIndex].classList.add('active'); 
+    dots[slideIndex].classList.add('active'); 
+}
+function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function scrollToOffer() { document.getElementById('offer-section').scrollIntoView({ behavior: 'smooth' }); }
+
+// Check if user is already logged in from localStorage
+const savedUser = localStorage.getItem('khas_user');
+if (savedUser) {
+    currentUser = JSON.parse(savedUser);
+    updateAuthSection();
+}
+
+startSlider();
+</script>
+</body>
+</html>
