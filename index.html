@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -190,9 +191,23 @@
         .search-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
         .search-bar input { flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: clamp(0.85rem, 3vw, 1rem); min-width: 200px; }
         
-        .facility-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
-        .medicine-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
-        .doctor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+                      .facility-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 1.5rem; 
+}
+.medicine-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 1.5rem; 
+}
+.doctor-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 1.5rem; 
+}
+        
+        
         
         .facility-card, .medicine-card, .doctor-card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s; cursor: pointer; }
         .facility-card:hover, .medicine-card:hover, .doctor-card:hover { transform: translateY(-5px); box-shadow: 0 8px 12px rgba(0,0,0,0.15); }
@@ -267,6 +282,236 @@
             .detail-grid { grid-template-columns: 1fr; }
             .logout-modal-buttons { flex-direction: column; }
         }
+        /* ============ ADD THIS AT THE BOTTOM OF YOUR STYLE SECTION ============ */
+
+/* Base responsive settings */
+html {
+    font-size: 16px;
+}
+
+/* Mobile First - Small screens */
+@media screen and (max-width: 768px) {
+    .navbar {
+        padding: 0.8rem 4%;
+    }
+    
+    .logo h1 {
+        font-size: 1rem;
+    }
+    
+    .logo small {
+        font-size: 0.6rem;
+    }
+    
+    .nav-links {
+        gap: 0.8rem;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .nav-link, .feature-nav {
+        font-size: 0.75rem;
+        padding: 0.3rem;
+    }
+    
+    .login-btn, .logout-btn-nav {
+        padding: 0.3rem 0.8rem;
+        font-size: 0.75rem;
+    }
+    
+    .user-profile {
+        padding: 0.3rem 0.8rem 0.3rem 0.6rem;
+        gap: 0.5rem;
+    }
+    
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+    
+    .user-name {
+        font-size: 0.7rem;
+    }
+    
+    .user-welcome {
+        font-size: 0.6rem;
+    }
+    
+    .hero-slider {
+        margin-top: 120px;
+        height: 350px;
+    }
+    
+    .slide-content {
+        padding: 1.2rem;
+        max-width: 95%;
+    }
+    
+    .slide-content h1 {
+        font-size: 1.2rem;
+    }
+    
+    .slide-content p {
+        font-size: 0.8rem;
+    }
+    
+    .slide-content i {
+        font-size: 2rem;
+    }
+    
+    .section {
+        padding: 40px 4%;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .mv-card, .value-card, .feature-card {
+        padding: 1.2rem;
+    }
+    
+    .mv-card i, .value-card i, .feature-card i {
+        font-size: 2rem;
+    }
+    
+    .mv-card h3, .value-card h3, .feature-card h3 {
+        font-size: 1rem;
+    }
+    
+    .mv-card p, .value-card p, .feature-card p {
+        font-size: 0.8rem;
+    }
+    
+    .footer {
+        padding: 2rem 4%;
+    }
+    
+    .footer-section h4 {
+        font-size: 0.9rem;
+    }
+    
+    .footer-section p, .footer-section a {
+        font-size: 0.75rem;
+    }
+    
+    .contact-item {
+        font-size: 0.75rem;
+    }
+    
+    .social-links i {
+        font-size: 1.2rem;
+    }
+}
+
+/* Extra Small screens (phones under 480px) */
+@media screen and (max-width: 480px) {
+    .navbar {
+        padding: 0.6rem 3%;
+    }
+    
+    .logo h1 {
+        font-size: 0.85rem;
+    }
+    
+    .nav-links {
+        gap: 0.5rem;
+    }
+    
+    .nav-link, .feature-nav {
+        font-size: 0.65rem;
+        padding: 0.25rem;
+    }
+    
+    .login-btn, .logout-btn-nav {
+        padding: 0.25rem 0.6rem;
+        font-size: 0.65rem;
+    }
+    
+    .hero-slider {
+        margin-top: 110px;
+        height: 280px;
+    }
+    
+    .slide-content h1 {
+        font-size: 1rem;
+    }
+    
+    .slide-content p {
+        font-size: 0.7rem;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+    }
+    
+    .mv-card, .value-card, .feature-card {
+        padding: 1rem;
+    }
+    
+    .mv-card i, .value-card i, .feature-card i {
+        font-size: 1.5rem;
+    }
+}
+
+/* Tablet screens (768px to 1024px) */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+    .hero-slider {
+        height: 450px;
+    }
+    
+    .slide-content h1 {
+        font-size: 2rem;
+    }
+    
+    .slide-content p {
+        font-size: 1rem;
+    }
+    
+    .facility-grid, .medicine-grid, .doctor-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Desktop large screens */
+@media screen and (min-width: 1200px) {
+    .dashboard-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .facility-grid, .medicine-grid, .doctor-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Ensure all containers have proper max-width */
+.dashboard-content, .section, .footer-content {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Fix for any overflow issues */
+body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* Make images and containers responsive */
+img, .map-container, .hero-slider {
+    max-width: 100%;
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+    button, .nav-link, .feature-nav, .login-btn, .logout-btn-nav, .filter-chip, .back-btn {
+        cursor: pointer;
+        min-height: 44px; /* Better touch targets */
+    }
+}
     </style>
 </head>
 <body>
