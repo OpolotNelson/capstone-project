@@ -633,8 +633,8 @@ function getUserProfileHTML() {
     if (!currentUser) {
         return `<button class="login-btn" onclick="showAuthModal()">Login / Sign Up</button>`;
     }
-    const firstName = getUserDisplayName();
-    const initial = getUserInitial();
+    const firstName = currentUser.firstName || currentUser.fullName?.split(' ')[0] || currentUser.email?.split('@')[0] || 'User';
+    const initial = firstName.charAt(0).toUpperCase();
     return `
         <div class="user-profile">
             <div class="user-avatar">${initial}</div>
@@ -1207,13 +1207,15 @@ function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function scrollToOffer() { document.getElementById('offer-section').scrollIntoView({ behavior: 'smooth' }); }
 
 // Check if user is already logged in from localStorage
+
 const savedUser = localStorage.getItem('khas_user');
 if (savedUser) {
     currentUser = JSON.parse(savedUser);
-    updateAuthSection();
 }
-
+// ALWAYS call updateAuthSection on page load - THIS IS THE FIX
+updateAuthSection();
 startSlider();
+
 </script>
 </body>
 </html>
